@@ -1,0 +1,78 @@
+{
+  "host": "heguanqi11-0",
+  "python": "3.11.15",
+  "source_commit": "de50fb2b04a6c7afd26991fe555f9a7128b266ab",
+  "packages": {
+    "onnxruntime": "1.31.1",
+    "triton": "3.3.0",
+    "isaacsim": "5.1.0.0",
+    "torch": "2.7.0+cu128",
+    "mujoco": "3.10.0",
+    "scipy": "1.15.3",
+    "onnx": "1.21.0",
+    "numpy": "1.26.0",
+    "hydra-core": "1.3.4"
+  },
+  "data": {
+    "train": {
+      "clips": 140855,
+      "frames": 52042528,
+      "index_sha256": "ed6d561b4c7b7997de4b3aa58f2646785000349526908b9e40a9b464d0220585",
+      "sources": [
+        "/localssd/lky/scalebfm-k1-data/bones_packed/train",
+        "/localssd/lky/scalebfm-k1-data/lafan_exact_packed/train"
+      ]
+    },
+    "eval": {
+      "clips": 1442,
+      "frames": 688611,
+      "index_sha256": "c2d31dbe717817235865fb25e1e6481916f651887e82bdecb773375f53c030b2",
+      "sources": [
+        "/localssd/lky/scalebfm-k1-data/bones_packed/eval",
+        "/localssd/lky/scalebfm-k1-data/lafan_exact_packed/eval"
+      ]
+    }
+  },
+  "train_shards": [
+    {
+      "rank": 0,
+      "clips": 17607,
+      "frames": 6505320
+    },
+    {
+      "rank": 1,
+      "clips": 17607,
+      "frames": 6505314
+    },
+    {
+      "rank": 2,
+      "clips": 17607,
+      "frames": 6505320
+    },
+    {
+      "rank": 3,
+      "clips": 17607,
+      "frames": 6505322
+    },
+    {
+      "rank": 4,
+      "clips": 17606,
+      "frames": 6505293
+    },
+    {
+      "rank": 5,
+      "clips": 17607,
+      "frames": 6505319
+    },
+    {
+      "rank": 6,
+      "clips": 17607,
+      "frames": 6505320
+    },
+    {
+      "rank": 7,
+      "clips": 17607,
+      "frames": 6505320
+    }
+  ]
+}
