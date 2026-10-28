@@ -120,3 +120,11 @@ learned motion quality from later full-clip evaluations and videos.
 
 The existing Unitree transport is not a Booster hardware transport. No real
 robot connection, controller upload, or physical execution was performed.
+
+Eight-rank full-library resume validation restored update 5, collected 71
+new simulator steps, completed updates 6–8, and saved update 8. All 628
+checkpoint tensors were finite and policy parameters changed. Steady updates
+measured approximately 0.2 s simulation + 0.3 s world model + 0.9 s policy,
+with real NCCL gradient reductions. Compilation is excluded from that timing;
+it took several minutes. These three updates are a pipeline check, not a
+convergence or performance claim.
