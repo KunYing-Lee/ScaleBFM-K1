@@ -35,10 +35,6 @@ from .rotations import (
     rotvec_from_quat,
 )
 
-NUM_JOINTS = 29
-STATE_DIM = 71
-FEATURE_DIM = 71
-DELTA_DIM = 70
 
 
 def read_state(robot, env_origins: torch.Tensor, env_ids: torch.Tensor | slice = slice(None)) -> torch.Tensor:
@@ -66,12 +62,14 @@ def read_state(robot, env_origins: torch.Tensor, env_ids: torch.Tensor | slice =
 
 
 def split_state(s: torch.Tensor):
-    return s[..., 0:3], s[..., 3:7], s[..., 7:36], s[..., 36:39], s[..., 39:42], s[..., 42:71]
+    nj = (s.shape[-1] - 13) // 2
+    return torch.split(s, (3, 4, nj, 3, 3, nj), dim=-1)
 
 
 @dataclass
 class StateSpecCfg:
     dt: float = 0.02
+    num_joints: int = 29
     # Nominal error scales for [root pos m, root rotvec rad, root lin vel m/s, root ang vel rad/s, joint pos, joint vel].
     err_scale: tuple[float, ...] = (0.05, 0.1, 0.5, 1.0, 0.1, 2.0)
     # Output scales of the dynamics network for [dv_h, dw_b, dqd, dp_h, dth_b, dq].
@@ -88,7 +86,9 @@ class StateSpec:
         def rep(scales, sizes):
             return torch.cat([torch.full((n,), float(s)) for s, n in zip(scales, sizes)]).to(device=device, dtype=dtype)
 
-        nj = NUM_JOINTS
+        nj = cfg.num_joints
+        if nj < 1:
+            raise ValueError("num_joints must be positive")
         self.err_scale = rep(cfg.err_scale, (3, 3, 3, 3, nj, nj))
         self.out_scale = rep(cfg.out_scale, (3, 3, nj, 3, 3, nj))
         self.in_scale = rep(cfg.in_scale, (1, 6, 3, 3, nj, nj))
@@ -103,8 +103,9 @@ class StateSpec:
 
     def integrate(self, s: torch.Tensor, delta: torch.Tensor) -> torch.Tensor:
         d = delta * self.out_scale
-        dv_h, dw_b, dqd = d[..., 0:3], d[..., 3:6], d[..., 6:35]
-        dp_h, dth_b, dq = d[..., 35:38], d[..., 38:41], d[..., 41:70]
+        dv_h, dw_b, dqd, dp_h, dth_b, dq = torch.split(
+            d, (3, 3, self.cfg.num_joints, 3, 3, self.cfg.num_joints), dim=-1
+        )
         p, q, qj, v, w, qd = split_state(s)
         q = quat_normalize(q)
         hq = heading_quat(q)

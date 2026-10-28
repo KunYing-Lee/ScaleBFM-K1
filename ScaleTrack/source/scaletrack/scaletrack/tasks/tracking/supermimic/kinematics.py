@@ -30,7 +30,7 @@ def parse_mjcf_tree(xml_path: str):
     if compiler is not None and compiler.attrib.get("angle", "degree") != "radian":
         raise ValueError("only angle='radian' MJCF files are supported")
     world = root.find("worldbody")
-    names, parents, pos, quat, joint_names, axes = [], [], [], [], [], []
+    names, parents, pos, quat, joint_names, axes, body_joints = [], [], [], [], [], [], []
 
     def visit(node, parent):
         idx = len(names)
@@ -38,26 +38,31 @@ def parse_mjcf_tree(xml_path: str):
         parents.append(parent)
         pos.append(np.fromstring(node.attrib.get("pos", "0 0 0"), sep=" "))
         quat.append(np.fromstring(node.attrib.get("quat", "1 0 0 0"), sep=" "))
-        if parent >= 0:
-            joints = node.findall("joint")
-            if len(joints) != 1:
-                raise ValueError(f"body {names[-1]} must have exactly one hinge joint")
-            if np.any(np.fromstring(joints[0].attrib.get("pos", "0 0 0"), sep=" ") != 0):
+        joints = node.findall("joint") if parent >= 0 else []
+        if len(joints) > 1:
+            raise ValueError(f"body {names[-1]} has more than one hinge joint")
+        body_joints.append(len(joint_names) if joints else -1)
+        if joints:
+            joint = joints[0]
+            if joint.attrib.get("type", "hinge") != "hinge":
+                raise ValueError(f"joint of body {names[-1]} must be a hinge")
+            if np.any(np.fromstring(joint.attrib.get("pos", "0 0 0"), sep=" ") != 0):
                 raise ValueError(f"joint of body {names[-1]} is not at the body origin")
-            joint_names.append(joints[0].attrib["name"])
-            axes.append(np.fromstring(joints[0].attrib.get("axis", "0 0 1"), sep=" "))
+            joint_names.append(joint.attrib["name"])
+            axis = np.fromstring(joint.attrib.get("axis", "0 0 1"), sep=" ")
+            axes.append(axis / np.linalg.norm(axis))
         for child in node.findall("body"):
             visit(child, idx)
 
     visit(world.find("body"), -1)
-    return names, parents, np.array(pos), np.array(quat), joint_names, np.array(axes)
+    return names, parents, np.array(pos), np.array(quat), joint_names, np.array(axes), body_joints
 
 
 class HumanoidKinematics:
     """Batched FK returning the poses and velocities of selected bodies."""
 
     def __init__(self, xml_path: str, sim_joint_names: list[str], output_body_names: list[str], device):
-        names, parents, pos, quat, joint_names, axes = parse_mjcf_tree(xml_path)
+        names, parents, pos, quat, joint_names, axes, self.body_joints = parse_mjcf_tree(xml_path)
         if sorted(joint_names) != sorted(sim_joint_names):
             raise ValueError("MJCF joints do not match the simulator joints")
         self.device = torch.device(device)
@@ -95,12 +100,18 @@ class HumanoidKinematics:
             p = self.parents[i]
             parent_pos, parent_quat = body_pos[p], body_quat[p]
             offset_w = quat_apply(parent_quat, self.local_pos[i].expand_as(parent_pos))
-            quat = quat_mul(quat_mul(parent_quat, self.local_quat[i].expand_as(parent_quat)), joint_quat[..., i - 1, :])
+            j = self.body_joints[i]
+            quat = quat_mul(parent_quat, self.local_quat[i].expand_as(parent_quat))
+            if j >= 0:
+                quat = quat_mul(quat, joint_quat[..., j, :])
             body_pos.append(parent_pos + offset_w)
             body_quat.append(quat)
             if with_vel:
-                axis_w = quat_apply(quat, self.axes[i - 1].expand_as(parent_pos))
-                body_ang.append(body_ang[p] + axis_w * qd[..., i - 1 : i])
+                if j >= 0:
+                    axis_w = quat_apply(quat, self.axes[j].expand_as(parent_pos))
+                    body_ang.append(body_ang[p] + axis_w * qd[..., j : j + 1])
+                else:
+                    body_ang.append(body_ang[p])
                 body_lin.append(body_lin[p] + torch.cross(body_ang[p], offset_w, dim=-1))
         idx = self.output_index
         out = {

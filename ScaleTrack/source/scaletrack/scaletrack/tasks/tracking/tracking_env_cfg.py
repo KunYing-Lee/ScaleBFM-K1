@@ -304,6 +304,9 @@ class CurriculumCfg:
 
 @configclass
 class BFMTrackingEnvCfg(ManagerBasedRLEnvCfg):
+    robot_mjcf_path: str = MISSING
+    context_foot_bodies: tuple[str, str] = ("left_ankle_roll_link", "right_ankle_roll_link")
+    context_mass_bodies: tuple[str, str] = ("left_wrist_yaw_link", "right_wrist_yaw_link")
     # Scene settings
     scene: MySceneCfg = MySceneCfg(num_envs=8192, env_spacing=2.5)
     # Basic settings

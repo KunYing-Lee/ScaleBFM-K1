@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from isaaclab.envs import ManagerBasedRLEnv
 
 from .reset_sampling import ResetContext
-from .state import STATE_DIM, read_state
+from .state import read_state
 
 
 class SuperMimicTrackingEnv(ManagerBasedRLEnv):
@@ -23,7 +23,7 @@ class SuperMimicTrackingEnv(ManagerBasedRLEnv):
         self._motion_reset_context = None
         self._explicit_reset = False
         super().__init__(cfg, render_mode, **kwargs)
-        self.terminal_state = torch.zeros(self.num_envs, STATE_DIM, device=self.device)
+        self.terminal_state = torch.zeros(self.num_envs, 13 + 2 * self.scene["robot"].num_joints, device=self.device)
 
     def make_imagination_task(self, **kwargs):
         """Imagination interface used by my_rsl_rl's SuperMimicRunner."""

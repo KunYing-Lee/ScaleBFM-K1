@@ -11,6 +11,7 @@ from pathlib import Path
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--task", default="G1-BFM-Transformer-Tracking-SuperMimic")
 parser.add_argument("--checkpoint", required=True)
 parser.add_argument("--motion_lib_dir", required=True)
 parser.add_argument("--output_dir", required=True)
@@ -57,7 +58,7 @@ def sha256(path):
 def main():
     torch.set_num_threads(4)
     torch.manual_seed(args.seed)
-    task = "G1-BFM-Transformer-Tracking-SuperMimic"
+    task = args.task
     cfg = parse_env_cfg(task, device=args.device, num_envs=1)
     cfg.seed = args.seed
     cfg.commands.motion.motion_lib_dir = args.motion_lib_dir

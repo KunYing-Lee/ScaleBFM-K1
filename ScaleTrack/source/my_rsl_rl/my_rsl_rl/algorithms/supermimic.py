@@ -261,7 +261,7 @@ class SuperMimic:
             self.wm_optimizer.zero_grad(set_to_none=True)
             loss.backward()
             self._average["wm"]()
-            stats[3] += torch.nn.utils.clip_grad_norm_(self.world_model.parameters(), self.wm_max_grad_norm, foreach=True)
+            stats[3] += torch.nn.utils.clip_grad_norm_(self.world_model.parameters(), self.wm_max_grad_norm, foreach=True, error_if_nonfinite=True)
             self.wm_optimizer.step()
             stats[0] += loss.detach()
         stats = (stats / self.wm_batches_per_update).tolist()
@@ -383,7 +383,7 @@ class SuperMimic:
         self.critic.requires_grad_(False)
         out = self._actor_pass(start.state, start.env_ids, start.info, start.hist_states, start.hist_actions)
         self._average["actor"]()
-        grad_norm = torch.nn.utils.clip_grad_norm_(self.actor_params, self.actor_max_grad_norm, foreach=True)
+        grad_norm = torch.nn.utils.clip_grad_norm_(self.actor_params, self.actor_max_grad_norm, foreach=True, error_if_nonfinite=True)
         torch.nn.utils.clip_grad_value_(self.actor_params, self.actor_max_grad_value, foreach=True)
         self.actor_optimizer.step()
         self.world_model.requires_grad_(True)
@@ -406,7 +406,7 @@ class SuperMimic:
                 self.critic_optimizer.zero_grad(set_to_none=True)
                 critic_loss.backward()
                 self._average["critic"]()
-                torch.nn.utils.clip_grad_norm_(self.critic.parameters(), self.critic_max_grad_norm, foreach=True)
+                torch.nn.utils.clip_grad_norm_(self.critic.parameters(), self.critic_max_grad_norm, foreach=True, error_if_nonfinite=True)
                 self.critic_optimizer.step()
 
         # One host transfer for all diagnostics.

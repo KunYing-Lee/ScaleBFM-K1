@@ -1,4 +1,5 @@
 from isaaclab.utils import configclass
+from scaletrack.assets import ASSET_DIR
 
 from scaletrack.robots.g1_29dof import G1_29DOF_ACTION_SCALE, G1_29DOF_CYLINDER_CFG
 
@@ -10,6 +11,7 @@ from scaletrack.tasks.tracking.tracking_env_cfg import (
 class G1BFMTrackingEnvCfg(BFMTrackingEnvCfg):
     def __post_init__(self):
         super().__post_init__()
+        self.robot_mjcf_path = f"{ASSET_DIR}/robots/g1_29dof/g1_29dof.xml"
 
         self.scene.robot = G1_29DOF_CYLINDER_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.actions.joint_pos.scale = G1_29DOF_ACTION_SCALE

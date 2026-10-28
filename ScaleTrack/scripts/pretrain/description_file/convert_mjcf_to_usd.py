@@ -45,6 +45,9 @@ import carb  # noqa: E402
 import isaacsim.core.utils.stage as stage_utils  # noqa: E402
 import omni.kit.app  # noqa: E402
 
+from isaacsim.core.utils.extensions import enable_extension
+enable_extension("isaacsim.asset.importer.mjcf")
+
 from isaaclab.sim.converters import MjcfConverter, MjcfConverterCfg  # noqa: E402
 from isaaclab.utils.assets import check_file_path  # noqa: E402
 from isaaclab.utils.dict import print_dict  # noqa: E402

@@ -40,6 +40,8 @@ class MotionLibrary:
         seed: int = 0,
     ):
         lib_dir = Path(lib_dir)
+        if (lib_dir / "INCOMPLETE").exists():
+            raise ValueError(f"Motion library is incomplete: {lib_dir}")
         with open(lib_dir / "index.json") as f:
             index = json.load(f)
         if index["body_names"] != list(body_names):

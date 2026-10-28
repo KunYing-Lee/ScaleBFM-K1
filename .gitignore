@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+ScaleTrack/logs/
+ScaleTrack/outputs/
+.pytest_cache/
+*.tmp
+._*

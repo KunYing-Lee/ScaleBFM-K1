@@ -14,15 +14,6 @@ from __future__ import annotations
 
 import torch
 
-FOOT_BODIES = ("left_ankle_roll_link", "right_ankle_roll_link")
-COM_BODY = "torso_link"
-MASS_BODIES = ("left_wrist_yaw_link", "right_wrist_yaw_link")
-XI_DIM = 4 + 29 + 3 + 2
-
-# Normalisation (centre, half range) matching the event ranges of tracking_env_cfg.EventCfg.
-XI_OFFSET = [0.95, 0.75, 0.95, 0.75] + [0.0] * 29 + [0.0] * 3 + [0.5, 0.5]
-XI_SCALE = [0.65, 0.45, 0.65, 0.45] + [0.01] * 29 + [0.025, 0.05, 0.05] + [0.5, 0.5]
-
 
 def _shapes_per_body(robot) -> list[int]:
     counts = []
@@ -33,12 +24,12 @@ def _shapes_per_body(robot) -> list[int]:
     return counts
 
 
-def read_sim_context(robot, device) -> torch.Tensor:
+def read_sim_context(robot, device, foot_bodies, mass_bodies) -> torch.Tensor:
     """Read xi of every environment from the simulator (after the start-up events ran)."""
     counts = _shapes_per_body(robot)
     materials = robot.root_physx_view.get_material_properties().to(device)  # (N, shapes, 3)
     parts = []
-    for name in FOOT_BODIES:
+    for name in foot_bodies:
         b = robot.body_names.index(name)
         start = sum(counts[:b])
         parts.append(materials[:, start : start + counts[b], :2].mean(1))
@@ -47,12 +38,13 @@ def read_sim_context(robot, device) -> torch.Tensor:
     parts.append(data.default_joint_pos - nominal)
     parts.append(getattr(data, "com_offset_randomization", torch.zeros(robot.num_instances, 3, device=device)).to(device))
     masses = robot.root_physx_view.get_masses().to(device)
-    ids = [robot.body_names.index(n) for n in MASS_BODIES]
+    ids = [robot.body_names.index(n) for n in mass_bodies]
     parts.append(masses[:, ids] - data.default_mass.to(device)[:, ids])
     return torch.cat(parts, dim=-1)
 
 
 def normalize_xi(xi: torch.Tensor) -> torch.Tensor:
-    offset = torch.tensor(XI_OFFSET, device=xi.device, dtype=xi.dtype)
-    scale = torch.tensor(XI_SCALE, device=xi.device, dtype=xi.dtype)
+    nj = xi.shape[-1] - 9
+    offset = xi.new_tensor([0.95, 0.75, 0.95, 0.75] + [0.0] * nj + [0.0] * 3 + [0.5, 0.5])
+    scale = xi.new_tensor([0.65, 0.45, 0.65, 0.45] + [0.01] * nj + [0.025, 0.05, 0.05] + [0.5, 0.5])
     return (xi - offset) / scale

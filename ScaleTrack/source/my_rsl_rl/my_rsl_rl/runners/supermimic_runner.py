@@ -162,6 +162,7 @@ class SuperMimicRunner(OnPolicyRunner):
         state, info = task.read_state(), task.step_info()
         ep_start = torch.ones(self.env.num_envs, dtype=torch.bool, device=self.device)
         stop = False
+        collected_env_steps = 0
         while not stop:
             if hasattr(command, "set_failure_reset_active"):
                 command.set_failure_reset_active(
@@ -187,8 +188,9 @@ class SuperMimicRunner(OnPolicyRunner):
                 ep_ret[reset_ids] = 0
                 ep_len[reset_ids] = 0
             self.env_steps += 1
+            collected_env_steps += 1
             timers["sim"] += time.perf_counter() - t0
-            if self.env_steps < self.warmup_env_steps:
+            if collected_env_steps < self.warmup_env_steps:
                 continue
 
             # ---- updates at the configured update-to-data ratio
@@ -252,6 +254,9 @@ class SuperMimicRunner(OnPolicyRunner):
                         ep_start[:] = True
                         ep_ret[:] = 0
                         ep_len[:] = 0
+                if self.save_interval > 0 and self.num_updates % self.save_interval == 0 and not stop:
+                    if self.log_dir is not None and not self.disable_logs:
+                        self.save(os.path.join(self.log_dir, f"model_{self.num_updates}.pt"))
                 if stop:
                     break
         self._checkpoint_and_eval(final=True)

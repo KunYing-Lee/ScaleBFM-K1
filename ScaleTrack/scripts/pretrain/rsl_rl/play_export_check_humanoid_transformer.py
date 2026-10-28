@@ -19,6 +19,7 @@ import cli_args  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
+parser.add_argument("--check_steps", type=int, default=0)
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument(
@@ -64,6 +65,7 @@ import torch.nn as nn
 import xml.etree.ElementTree as ET
 
 from my_rsl_rl.runners.on_policy_runner import OnPolicyRunner
+from my_rsl_rl.runners.supermimic_runner import SuperMimicRunner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -260,7 +262,7 @@ class HumanoidTransformerPolicyWrapperWithMode(nn.Module):
         dof_pos = dof_pos_buffer[:, -1]
 
         # FK Module
-        half_angles = dof_pos[:, self.lab_to_xml_joint_indices].unsqueeze(-1) / 2
+        half_angles = torch.cat([dof_pos, torch.zeros_like(dof_pos[:, :1])], -1)[:, self.lab_to_xml_joint_indices].unsqueeze(-1) / 2
         sin_half = torch.sin(half_angles)
         cos_half = torch.cos(half_angles)
         joint_rot = torch.cat([cos_half, self.joint_axis.unsqueeze(0) * sin_half], dim=-1)
@@ -419,13 +421,13 @@ def parse_xml(xml_file, device = "cpu"):
         else:
             curr_joints = xml_node.findall("joint")
             num_joints = len(curr_joints)
-            assert num_joints == 1
-            _axis = np.fromstring(curr_joints[0].attrib.get("axis"), dtype=float, sep=" ")
+            assert num_joints <= 1
+            _axis = np.fromstring(curr_joints[0].attrib.get("axis", "0 0 1"), dtype=float, sep=" ") if curr_joints else np.zeros(3)
             axis = torch.from_numpy(_axis)
             local_rotation.append(rot)
             local_translation.append(pos)
             joint_axis.append(axis)
-            joint_names.append(curr_joints[0].attrib.get("name"))
+            joint_names.append(curr_joints[0].attrib.get("name") if curr_joints else None)
         
         body_names.append(body_name)
         parent_indices.append(parent_index)
@@ -471,7 +473,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     log_root_path = os.path.abspath(log_root_path)
     
     print(f"[INFO]: Using motion file from CLI: {args_cli.motion_file}")
-    env_cfg.commands.motion.motion_file = args_cli.motion_file
+    if hasattr(env_cfg.commands.motion, "motion_lib_dir"):
+        env_cfg.commands.motion.motion_lib_dir = args_cli.motion_file
+    else:
+        env_cfg.commands.motion.motion_file = args_cli.motion_file
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
@@ -506,7 +511,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env = RslRlVecEnvWrapper(env)
 
     # load previously trained model
-    ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    runner_class = SuperMimicRunner if agent_cfg.class_name == "SuperMimicRunner" else OnPolicyRunner
+    ppo_runner = runner_class(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
     ppo_runner.load(resume_path)
     
     ppo_runner._set_env_is_evaluating()
@@ -527,7 +533,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     future_len = len(future_idx)
     time_offsets = torch.as_tensor(future_idx, dtype=torch.long, device=mode_vector.device)[None, :, None]
 
-    xml_path = env.unwrapped.scene.cfg.robot.spawn.usd_path.replace('.usda','.xml')
+    xml_path = env_cfg.robot_mjcf_path
     body_names, joint_names, parent_indices, joint_axis, local_translation, local_rotation = parse_xml(xml_path, mode_vector.device)
     local_rotation = local_rotation / local_rotation.norm(dim=-1, keepdim=True)
 
@@ -535,7 +541,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     selected_body_indices = torch.tensor([body_names.index(name) for name in selected_body_name], dtype=torch.long, device=mode_vector.device)
     
     robot_joint_names = env.unwrapped.command_manager.get_term('motion').robot.joint_names
-    lab_to_xml_joint_idx = [robot_joint_names.index(name) for name in joint_names]
+    lab_to_xml_joint_idx = [robot_joint_names.index(name) if name is not None else len(robot_joint_names) for name in joint_names]
     lab_to_xml_joint_idx = torch.tensor(lab_to_xml_joint_idx, dtype=torch.long, device=mode_vector.device)
 
     with torch.inference_mode():
@@ -688,6 +694,18 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         model = torch.jit.load(model_path).to(mode_vector.device)
     else:
         model = OnnxPolicy(model_path)
+    if args_cli.check_steps:
+        with torch.inference_mode():
+            mode_errors = []
+            for mode_id in range(len(mode_vector)):
+                mode_inputs = trt_inputs.copy()
+                mode_inputs[7] = torch.tensor([mode_id], dtype=torch.long, device=mode_vector.device)
+                expected = wrapper(*mode_inputs)
+                exported = model(*mode_inputs)
+                error = max(float((x-y).abs().max()) for x,y in zip(expected,exported))
+                assert np.isfinite(error) and error < 1e-4, (mode_id,error)
+                mode_errors.append(error)
+            pathlib.Path(model_path + ".modes.json").write_text(json.dumps(dict(passed=True,mode_errors=mode_errors)))
     mode_index = torch.tensor([7], dtype=torch.long, device=mode_vector.device)
 
     root_pos = env.unwrapped.command_manager.get_term('motion').robot_anchor_pos_w
@@ -709,6 +727,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     actions_buffer = actions.unsqueeze(1).expand(-1, obs["policy"].shape[-2], -1)
 
     timestep = 0
+    max_action_error = 0.0
     while simulation_app.is_running():
 
         with torch.inference_mode():
@@ -744,7 +763,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
             print(f"Prop Obs: {torch.allclose(prop_obs, obs['policy'], atol=1e-04)}")
 
-            half_angles = dof_pos[..., lab_to_xml_joint_idx].unsqueeze(-1) / 2
+            half_angles = torch.cat([dof_pos, torch.zeros_like(dof_pos[:, :1])], -1)[..., lab_to_xml_joint_idx].unsqueeze(-1) / 2
             sin_half = torch.sin(half_angles) # (bs, num_joints, 1)
             cos_half = torch.cos(half_angles)
             joint_rot = torch.cat([
@@ -828,10 +847,20 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             print(f"Inference runs at a frequency of: {1/span}HZ")
             
             normal_actions = policy(obs)
+            action_error = float((actions - normal_actions).abs().max())
+            max_action_error = max(max_action_error, action_error)
+            if args_cli.check_steps:
+                assert torch.isfinite(actions).all() and action_error < 1e-3, f"Export action mismatch: {action_error}"
             print(f"Output Actions: {torch.allclose(actions, normal_actions, atol=1e-02)}")
 
             obs, _, _, _ = env.step(actions)
 
+        if args_cli.check_steps:
+            timestep += 1
+            if timestep >= args_cli.check_steps:
+                pathlib.Path(model_path + ".verification.json").write_text(json.dumps(dict(steps=timestep,max_action_error=max_action_error,passed=True)))
+                print("EXPORT_VERIFICATION_PASS", flush=True)
+                os._exit(0)
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video

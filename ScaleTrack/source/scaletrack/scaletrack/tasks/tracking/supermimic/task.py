@@ -12,21 +12,15 @@ through :class:`TrackingImaginationTask`, built from the live environment:
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import torch
 
-from .context import XI_DIM, normalize_xi, read_sim_context
+from .context import normalize_xi, read_sim_context
 from .heads import HeadsCfg, RefFrames, TrackingHeads
 from .kinematics import HumanoidKinematics
-from .state import STATE_DIM, StateSpec, StateSpecCfg, read_state
-
-ASSET_XML = Path(__file__).resolve().parents[3] / "assets" / "robots" / "g1_29dof" / "g1_29dof.xml"
+from .state import StateSpec, StateSpecCfg, read_state
 
 
 class TrackingImaginationTask:
-    state_dim = STATE_DIM
-    xi_dim = XI_DIM
     reward_term_names = (
         "motion_body_height", "motion_body_pos", "motion_body_rot", "motion_body_lin_vel", "motion_body_ang_vel",
         "action_rate_l2", "joint_limit", "survival",
@@ -41,17 +35,19 @@ class TrackingImaginationTask:
         self.lib = self.command.train_lib
         cfg = heads_cfg or HeadsCfg()
         cfg.step_dt = env.step_dt
-        self.spec = StateSpec(spec_cfg or StateSpecCfg(dt=env.step_dt), self.device)
+        self.state_dim = 13 + 2 * self.robot.num_joints
+        self.spec = StateSpec(spec_cfg or StateSpecCfg(dt=env.step_dt, num_joints=self.robot.num_joints), self.device)
 
         data = self.robot.data
-        kin = HumanoidKinematics(str(xml_path or ASSET_XML), self.robot.joint_names, self.command.cfg.body_names, self.device)
+        kin = HumanoidKinematics(str(xml_path or env.cfg.robot_mjcf_path), self.robot.joint_names, self.command.cfg.body_names, self.device)
         q0 = getattr(data, "default_joint_pos_nominal", data.default_joint_pos[0]).clone()
         self.heads = TrackingHeads(cfg, kin, q0, data.soft_joint_pos_limits[0].clone(), self.command._mode_table.clone())
         self.policy_offsets = torch.tensor(cfg.policy_future_idx, device=self.device)
         self.critic_offsets = torch.tensor(cfg.critic_future_idx, device=self.device)
 
         # Fixed per-environment quantities (all randomisation happens at start-up).
-        self.xi = read_sim_context(self.robot, self.device)
+        self.xi = read_sim_context(self.robot, self.device, env.cfg.context_foot_bodies, env.cfg.context_mass_bodies)
+        self.xi_dim = self.xi.shape[-1]
         self.xi_norm = normalize_xi(self.xi)
         self.joint_offset = data.default_joint_pos - q0
         self.com_pos_b = self.robot.root_physx_view.get_coms().to(self.device)[:, self.command.body_indexes, :3].clone()
@@ -130,7 +126,7 @@ class TrackingImaginationTask:
 
     @property
     def critic_dim(self) -> int:
-        return self.spec.in_scale.shape[0] + XI_DIM + self.heads.num_bodies + len(self.critic_offsets) * (
+        return self.spec.in_scale.shape[0] + self.xi_dim + self.heads.num_bodies + len(self.critic_offsets) * (
             self.heads.num_bodies * (3 + 3 + 6 + 6 + 3 + 3) + 1
         )
 

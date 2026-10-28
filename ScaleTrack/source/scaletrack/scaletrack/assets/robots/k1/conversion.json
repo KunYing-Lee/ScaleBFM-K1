@@ -1,0 +1,16 @@
+{
+  "source_sha256": "4dc017241def046cc90fd364f6b408b767a560c31a5e82e21fd985e3e53ba9a6",
+  "removed_massless_leaf_frames": [
+    "left_hand_end_link",
+    "right_hand_end_link",
+    "left_foot_end_link",
+    "left_toe_link",
+    "right_foot_end_link",
+    "right_toe_link"
+  ],
+  "worldbody_deactivated": [
+    "/K1_22dof/worldBody"
+  ],
+  "physical_mass_kg": 19.666,
+  "validation": "exact equality of retained body transforms, masses, inertias and generalized-coordinate dimensions"
+}
