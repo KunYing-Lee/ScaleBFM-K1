@@ -1,0 +1,23 @@
+{
+  "recorded_at": "2026-10-28T20:17:12.486792+00:00",
+  "source_commit": "53fea98fcc4ed89441680ae1ccae491ebef333fe",
+  "launcher_pid": 43225,
+  "host": "root@10.210.22.96:31697",
+  "run_dir": "/localssd/lky/ScaleBFM-K1/ScaleTrack/logs/rsl_rl/k1_bfm_supermimic/k1_bones_lafan_a10_full",
+  "log": "/localssd/lky/scalebfm-k1-long.log",
+  "data": "/localssd/lky/scalebfm-k1-data/combined_exact",
+  "from_scratch": true,
+  "target_updates": 320000,
+  "world_size": 8,
+  "environments_per_rank": 512,
+  "global_imagination_batch": 2048,
+  "global_world_model_batch": 2048,
+  "checkpoint_every": 1000,
+  "evaluate_every": 5000,
+  "validation_checkpoint": "/localssd/lky/ScaleBFM-K1/docs/k1/evidence/checkpoint-resume.json",
+  "source_bundle": "/cephfs_ssd_zhaohang/lky/scalebfm_k1_runs/20261029/k1-source.bundle",
+  "config_sha256": {
+    "env.yaml": "adfa1acbfc6a0c28ee257faede3223b32fc8870e3800b6d4702e6d6ed387165e",
+    "agent.yaml": "7e48b6359228c2188f20f9a023957537ca2d4286aab982c880576a1e39a31c28"
+  }
+}

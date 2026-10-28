@@ -128,3 +128,22 @@ measured approximately 0.2 s simulation + 0.3 s world model + 0.9 s policy,
 with real NCCL gradient reductions. Compilation is excluded from that timing;
 it took several minutes. These three updates are a pipeline check, not a
 convergence or performance claim.
+
+## Verified live-run snapshot: 2026-10-29 05:37 Asia/Shanghai
+
+The from-scratch eight-A10 run is active under launcher PID `43225`, run name
+`k1_bones_lafan_a10_full`, source commit
+`53fea98fcc4ed89441680ae1ccae491ebef333fe`. It reached update 3,350 / 320,000.
+Checkpoints 1,000, 2,000 and 3,000 were saved. Checkpoints 1,000 and 3,000
+were independently reloaded on CPU; all 628 tensors in each were finite.
+Checkpoint 3,000 was copied to
+`/cephfs_ssd_zhaohang/lky/scalebfm_k1_runs/20261029/model_3000.pt` and the
+SHA256 of the backup matched. The first full held-out evaluation is scheduled
+inside training at update 5,000 and had not yet run at this snapshot.
+
+Live log: `/localssd/lky/scalebfm-k1-long.log`.
+Run directory:
+`/localssd/lky/ScaleBFM-K1/ScaleTrack/logs/rsl_rl/k1_bfm_supermimic/k1_bones_lafan_a10_full`.
+See `evidence/launch-manifest.json` and `evidence/long-run-status.json` for
+configuration hashes, checkpoint hashes, timestamps and the observed update.
+This section is a snapshot, not a continuously refreshed status page.
