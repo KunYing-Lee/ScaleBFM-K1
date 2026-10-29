@@ -1,12 +1,8 @@
 # ScaleBFM-K1
 
-22-DoF K1 motion tracking with ScaleBFM and SuperMimic-style world-model training,
-based on [ScaleBFM_Plus](https://github.com/Hxxxz0/ScaleBFM_Plus).
+22-DoF K1 motion tracking with ScaleBFM and SuperMimic-style world-model training.
 
 ## Demos
-
-Simulated policy execution, 42k checkpoint, seed 42. Blue is the global reference;
-no trajectory correction. Click each preview for its independent, text-free MP4.
 
 | | |
 |---|---|
@@ -14,11 +10,6 @@ no trajectory correction. Click each preview for its independent, text-free MP4.
 | **Charleston**<br>[![Charleston](docs/media/05_charleston.gif)](docs/media/05_charleston.mp4) | **Clap step**<br>[![Clap step](docs/media/09_clap_step.gif)](docs/media/09_clap_step.mp4) |
 | **Macarena**<br>[![Macarena](docs/media/12_macarena.gif)](docs/media/12_macarena.mp4) | **Squat**<br>[![Squat](docs/media/14_squat.gif)](docs/media/14_squat.mp4) |
 | **Titan Run**<br>[![Titan Run](docs/media/15_titan_run.gif)](docs/media/15_titan_run.mp4) | **Supine get-up**<br>[![Supine get-up](docs/media/16_supine_getup.gif)](docs/media/16_supine_getup.mp4) |
-
-BONES demos use complete clips. The two LAFAN fighting demos use independently
-initialized windows; they do not establish full-length tracking success.
-[Sources and intervals](docs/media/manifest.json). These are selected simulation
-results, not hardware validation.
 
 ## Train
 
