@@ -1,103 +1,41 @@
-# ScaleBFM
+# ScaleBFM-K1
 
-The official implementation of *Scaling Behavior Foundation Model for Humanoid Robots*.
+22-DoF K1 motion tracking with ScaleBFM and SuperMimic-style world-model training,
+based on [ScaleBFM_Plus](https://github.com/Hxxxz0/ScaleBFM_Plus).
 
-> ScaleBFM investigates how Behavior Foundation Models can be effectively scaled
-> through the coordinated design of the learning paradigm, behavioral data, and
-> model architecture. The resulting framework enables humanoid robots to perform
-> diverse behaviors with natural whole-body coordination, including agile
-> locomotion, dexterous manipulation, and coordinated loco-manipulation in both
-> simulation and the real world.
+## Demos
 
-<p align="center">
-  <a href="https://scalebfm.github.io/"><img src="https://img.shields.io/badge/Project-Website-4285F4?logo=googlechrome&logoColor=white" alt="Project website"></a>
-  <a href="https://arxiv.org/abs/2607.15163"><img src="https://img.shields.io/badge/arXiv-2607.15163-b31b1b?logo=arxiv&logoColor=white" alt="arXiv paper"></a>
-  <a href="https://github.com/zengweishuai/ScaleBFM/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?logo=github&logoColor=white" alt="GitHub issues"></a>
-</p>
+Simulated policy execution, 42k checkpoint, seed 42. Blue is the global reference;
+no trajectory correction. Click each preview for its independent, text-free MP4.
 
+| | |
+|---|---|
+| **Kick and recovery**<br>[![Kick and recovery](docs/media/01_kick.gif)](docs/media/01_kick.mp4) | **Fighting**<br>[![Fighting](docs/media/02_fighting.gif)](docs/media/02_fighting.mp4) |
+| **Charleston**<br>[![Charleston](docs/media/05_charleston.gif)](docs/media/05_charleston.mp4) | **Clap step**<br>[![Clap step](docs/media/09_clap_step.gif)](docs/media/09_clap_step.mp4) |
+| **Macarena**<br>[![Macarena](docs/media/12_macarena.gif)](docs/media/12_macarena.mp4) | **Squat**<br>[![Squat](docs/media/14_squat.gif)](docs/media/14_squat.mp4) |
+| **Titan Run**<br>[![Titan Run](docs/media/15_titan_run.gif)](docs/media/15_titan_run.mp4) | **Supine get-up**<br>[![Supine get-up](docs/media/16_supine_getup.gif)](docs/media/16_supine_getup.mp4) |
 
+BONES demos use complete clips. The two LAFAN fighting demos use independently
+initialized windows; they do not establish full-length tracking success.
+[Sources and intervals](docs/media/manifest.json). These are selected simulation
+results, not hardware validation.
 
-## ScaleRetarget
+## Train
 
-**ScaleRetarget** is the motion-retargeting toolkit used to prepare human motion
-data for ScaleBFM. It converts motion from common mocap representations into
-robot joint trajectories and currently provides a complete configuration for the
-Unitree G1 humanoid.
+Follow [setup and data preparation](docs/k1/README.md), then launch with a packed
+BONES-SEED + LAFAN1 K1 library:
 
-
-The retargeting code and documentation are available in
-**[ScaleRetarget](ScaleRetarget/README.md)**. See the guide for supported datasets,
-environment setup, motion retargeting, dataset preparation, and visualization.
-
-<p align="center">
-  <img src="ScaleRetarget/assets/demos/amass.gif" alt="AMASS motion retargeted to Unitree G1" width="32%">
-  <img src="ScaleRetarget/assets/demos/finedance.gif" alt="FineDance motion retargeted to Unitree G1" width="32%">
-  <img src="ScaleRetarget/assets/demos/mixamo.gif" alt="Mixamo motion retargeted to Unitree G1" width="32%">
-</p>
-
-## ScaleTrack
-
-**ScaleTrack** provides the foundational implementation of the BFM pretraining
-pipeline. It packages retargeted robot trajectories into motion datasets and
-pretrains BFMs through motion tracking in IsaacLab using the bundled RSL-RL
-implementation. It currently provides a complete pretraining pipeline for the
-Unitree G1 humanoid, including single- and multi-GPU training, policy playback, and export.
-Besides PPO, it supports SuperMimic-style training through a learned differentiable world model: each training
-step is 26× faster, and the released SuperMimic checkpoint tracks on par with the official ScaleBFM-M (see
-[Fast training with a learned world model](ScaleTrack/README.md#fast-training-with-a-learned-world-model-supermimic)).
-
-The training code and documentation are available in
-**[ScaleTrack](ScaleTrack/README.md)**. See the guide for environment and robot
-asset setup, motion preparation and packaging, policy training, playback, and
-export.
-
-<p align="center">
-  <img src="ScaleTrack/assets/demos/example_1.gif" alt="ScaleTrack motion-tracking demo 1" width="32%">
-  <img src="ScaleTrack/assets/demos/example_2.gif" alt="ScaleTrack motion-tracking demo 2" width="32%">
-  <img src="ScaleTrack/assets/demos/example_3.gif" alt="ScaleTrack motion-tracking demo 3" width="32%">
-</p>
-
-## ScaleBridge
-
-**ScaleBridge** provides a unified Sim2Sim and Sim2Real deployment framework for
-Behavior Foundation Models on humanoid robots. It enables a seamless transition
-from policy evaluation in MuJoCo to deployment on physical robots.
-
-The deployment code and documentation are available in
-**[ScaleBridge](ScaleBridge/README.md)**. See the guide for environment setup,
-robot controller configuration, policy evaluation, real-world deployment, and
-migration instructions.
-
-<p align="center">
-  <img src="ScaleBridge/assets/teaser_1.gif" alt="ScaleBridge humanoid deployment demo 1" width="32%">
-  <img src="ScaleBridge/assets/teaser_2.gif" alt="ScaleBridge humanoid deployment demo 2" width="32%">
-  <img src="ScaleBridge/assets/teaser_3.gif" alt="ScaleBridge humanoid deployment demo 3" width="32%">
-</p>
-
-## Citation
-
-If you find this work useful, please cite our paper and previous work
-that introduced the BFM framework:
-
-```bibtex
-@article{zeng2026scaling,
-  title   = {Scaling Behavior Foundation Model for Humanoid Robots},
-  author  = {Zeng, Weishuai and Yin, Kangning and Niu, Xiaojie and
-             Lu, Shunlin and Zhong, Weixiang and Chen, Jiahe and
-             Jia, Feiyu and Chen, Xiao and Wang, Zirui and Xu, Furui and
-             Zhou, Ming and Li, Kailin and Zhang, Weinan and Wang, He and
-             Yi, Li and Lin, Dahua and Pang, Jiangmiao and Wang, Jingbo},
-  journal = {arXiv preprint arXiv:2607.15163},
-  year    = {2026}
-}
+```bash
+K1_DATA_DIR=/path/to/combined_exact bash ScaleTrack/scripts/k1/launch_a10.sh
 ```
 
-```bibtex
-@article{zeng2025behavior,
-  title   = {Behavior Foundation Model for Humanoid Robots},
-  author  = {Zeng, Weishuai and Lu, Shunlin and Yin, Kangning and
-             Niu, Xiaojie and Dai, Minyue and Wang, Jingbo and Pang, Jiangmiao},
-  journal = {arXiv preprint arXiv:2509.13780},
-  year    = {2025}
-}
-```
+Defaults: 8 GPUs, 512 environments/GPU, seed 42, 320k updates.
+Training, playback and export entry points are under `ScaleTrack/scripts/pretrain/`;
+K1 data and asset tools are under `ScaleTrack/scripts/k1/`.
+
+## Acknowledgements
+
+[ScaleBFM](https://github.com/zengweishuai/ScaleBFM),
+[ScaleBFM_Plus](https://github.com/Hxxxz0/ScaleBFM_Plus),
+[SuperMimic](https://github.com/KunYing-Lee/SuperMimic), IsaacLab and RSL-RL.
+Upstream attribution and bundled third-party license notices are retained.

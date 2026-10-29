@@ -1,6 +1,0 @@
-# Base Agent Config File
-
-_target_: agent.base_agent.BaseAgent
-device: ${device}
-config:
-  checkpoint: ???

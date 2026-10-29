@@ -1,23 +1,23 @@
-# ScaleBFM Plus on K1
+# Setup and data
 
-This port targets the 22-DoF K1 model shipped with the explicitly selected
-BONES-SEED/SOMA K1-final dataset. It supports the ScaleBFM transformer policy,
-PPO, SuperMimic world-model/BPTT training, packed datasets, distributed
-training, evaluation, portable ONNX export, and headless MuJoCo execution.
-No physical K1 deployment or tracking-quality acceptance is implied.
+Use Python 3.11, Isaac Sim 5.1.0 and IsaacLab commit
+`18c7c58d7a6758b6119401945b881e21c8ec0392`.
+Install IsaacLab following its installation guide, then:
 
-## Source identity
+```bash
+pip install -e ScaleTrack/source/scaletrack -e ScaleTrack/source/my_rsl_rl
+pip install mujoco pytest
+```
 
-- Upstream: https://github.com/Hxxxz0/ScaleBFM_Plus
-- Base commit: `65e4d524bd31fdc4284ba8c6e624fb0b0127da03`
-- IsaacLab: `18c7c58d7a6758b6119401945b881e21c8ec0392`, Isaac Sim 5.1.
-- Robot MJCF SHA256: `4dc017241def046cc90fd364f6b408b767a560c31a5e82e21fd985e3e53ba9a6`.
-- Actuator gains/limits: K1Lab `30f015a61f9583cba664b5ea65b0a1c73fba57e2`.
-- Source data stays immutable. Every BONES source CSV and LAFAN source NPZ is hashed.
+The K1 MJCF and USD are included. Data and checkpoints are not bundled.
+The preparation tools in `ScaleTrack/scripts/k1/` expose their required inputs
+with `--help`: `prepare_bones.py`, `prepare_lafan.py`, `retarget_lafan.py`,
+`pack_library.py`, and `merge_libraries.py`. Use the exact K1 morphology
+conversion before packing LAFAN. Do not mix previous IK outputs with this library.
 
 ## Data
 
-BONES source: `/cephfs_ssd_zhaohang/lky/soma_k1_full/out/k1_final`.
+BONES source: the BONES-SEED/SOMA `k1_final` release.
 All 142,220 clips are retained, including the corrections already present in
 that selected version. The loader verifies the CSV schema, frame sequence,
 units, finite values, and complete inventory. Root Euler angles use extrinsic
@@ -38,7 +38,7 @@ All frames passed, with maximum foot position error 8.27 micrometres.
 Earlier joint-IK outputs were rejected for newly introduced temporal jumps
 and are excluded from the final library.
 
-Final library: `/localssd/lky/scalebfm-k1-data/combined_exact`.
+Packed output must contain `train/` and `eval/` directories.
 
 | Partition | BONES clips | LAFAN clips | Total frames at 50 Hz |
 |---|---:|---:|---:|
@@ -69,81 +69,29 @@ when merged. `INCOMPLETE` libraries are refused by the runtime loader.
   `K1-BFM-Transformer-Tracking-Packed-PPO` (packed PPO), and
   `K1-BFM-Transformer-Tracking-SuperMimic`.
 
-## Eight-A10 run
 
-Host: `ssh -p 31697 root@10.210.22.96`.
-Code: `/localssd/lky/ScaleBFM-K1`.
-Python: `/localssd/lky/scalebfm-k1-venv/bin/python`.
+## Training and checks
 
-Run `bash ScaleTrack/scripts/k1/launch_a10.sh` from this host. It uses eight
-DDP ranks, 512 simulation environments/rank (4,096 total), and 256 world-model
-and imagination samples/rank (2,048 global). The global batch and base
-learning rates are preserved; world-size LR multiplication is disabled.
-The 256 x 4-layer transformer and 2048 x 3 world model remain unchanged,
-as do horizon 32, model window 8, 10 WM minibatches/update, 300 WM-only
-updates, replay capacity 1000, update/data ratio 0.4 and cosine LR schedule.
-Actor activation recomputation saves memory without changing the objective.
-Target: 320,000 updates. Checkpoints every 1,000 updates; complete held-out
-motion evaluation every 5,000 updates. Failed finite-gradient checks stop the
-run instead of repairing or silently dropping the update.
+`launch_a10.sh` preserves the eight-A10 training recipe: eight ranks,
+512 environments per rank, seed 42, 256 world-model and imagination samples
+per rank, actor activation checkpointing, and no world-size learning-rate scaling.
+Set `PYTHON`, `NPROC_PER_NODE`, or `SCALETRACK_COMPILE_CACHE_DIR` as needed.
+Additional training arguments are forwarded to the trainer.
 
-Checkpoint continuation restores policy, world model, critic, normalizer and
-optimizer states. Replay and simulator state are rebuilt; continuation first
-collects 64 fresh simulation steps. It is not bitwise full-state resumption.
-Evaluation and checkpoint frequency are separate: upstream ignored
-`save_interval` in this runner; this port honours it.
+```bash
+python -m pytest ScaleTrack/source/scaletrack/test/test_k1_model.py -q
+```
 
-## Validation and limits
+This checks K1/G1 state derivatives and forward kinematics against MuJoCo.
+Checkpoint continuation restores model and optimizer states; replay and
+simulator state are rebuilt. It is not bitwise full-state resumption.
 
-Independent MuJoCo FK and derivative tests cover both K1 and G1. The actual
-USD articulation was checked against the MJCF and stepped with PD controls.
-The runtime parity test exercises 300 steps x 128 environments, including
-779 terminations and 164 motion ends. Positions, rotations, histories,
-observations, rewards and termination decisions agree at the stated gates.
+## Provenance
 
-An Isaac Sim 5.1 limitation is explicitly retained in the evidence: before
-its first physics step, child velocity readback still uses the nominal root
-CoM after startup CoM randomization. Its discrepancy is independently checked
-against the exact angular-velocity cross CoM-offset identity. No simulator
-or policy output is corrected. After the first physics step, including later
-resets, the raw CoM velocity comparisons pass (maximum 9.48e-6 m/s).
-This initialization-only diagnostic is excluded from the training-consumed
-quantity gate, rather than falsely reported as equal.
-
-Portable export checks all eight modes against PyTorch and runs 64 closed-loop
-steps against the native policy. `ScaleBridge/scripts/k1_sim2sim.py` executes
-this ONNX in MuJoCo with one reference-state initialization, measured root
-localization and torque-limited PD; it never forces the reference root.
-The short validation checkpoint is deliberately not a trained controller:
-its held-out success and sim-to-sim quality do not pass acceptance. Assess
-learned motion quality from later full-clip evaluations and videos.
-
-The existing Unitree transport is not a Booster hardware transport. No real
-robot connection, controller upload, or physical execution was performed.
-
-Eight-rank full-library resume validation restored update 5, collected 71
-new simulator steps, completed updates 6–8, and saved update 8. All 628
-checkpoint tensors were finite and policy parameters changed. Steady updates
-measured approximately 0.2 s simulation + 0.3 s world model + 0.9 s policy,
-with real NCCL gradient reductions. Compilation is excluded from that timing;
-it took several minutes. These three updates are a pipeline check, not a
-convergence or performance claim.
-
-## Verified live-run snapshot: 2026-10-29 05:37 Asia/Shanghai
-
-The from-scratch eight-A10 run is active under launcher PID `43225`, run name
-`k1_bones_lafan_a10_full`, source commit
-`53fea98fcc4ed89441680ae1ccae491ebef333fe`. It reached update 3,350 / 320,000.
-Checkpoints 1,000, 2,000 and 3,000 were saved. Checkpoints 1,000 and 3,000
-were independently reloaded on CPU; all 628 tensors in each were finite.
-Checkpoint 3,000 was copied to
-`/cephfs_ssd_zhaohang/lky/scalebfm_k1_runs/20261029/model_3000.pt` and the
-SHA256 of the backup matched. The first full held-out evaluation is scheduled
-inside training at update 5,000 and had not yet run at this snapshot.
-
-Live log: `/localssd/lky/scalebfm-k1-long.log`.
-Run directory:
-`/localssd/lky/ScaleBFM-K1/ScaleTrack/logs/rsl_rl/k1_bfm_supermimic/k1_bones_lafan_a10_full`.
-See `evidence/launch-manifest.json` and `evidence/long-run-status.json` for
-configuration hashes, checkpoint hashes, timestamps and the observed update.
-This section is a snapshot, not a continuously refreshed status page.
+Based on Hxxxz0/ScaleBFM_Plus commit
+`65e4d524bd31fdc4284ba8c6e624fb0b0127da03`.
+K1 actuator settings derive from K1Lab commit
+`30f015a61f9583cba664b5ea65b0a1c73fba57e2`.
+The active training source is commit `53fea98`; this release only reorganizes
+publication material and makes its launcher portable. No training algorithm
+or default hyperparameter changes are introduced.

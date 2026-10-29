@@ -5,3 +5,11 @@ ScaleTrack/outputs/
 .pytest_cache/
 *.tmp
 ._*
+
+.DS_Store
+*.pt
+*.onnx
+*.npz
+*.npy
+.venv/
+ScaleTrack/checkpoints/
