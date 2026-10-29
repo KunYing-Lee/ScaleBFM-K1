@@ -1,5 +1,5 @@
 <mujoco model="K1">
-  <compiler angle="radian" meshdir="/localssd/lky/ScaleBFM-K1/ScaleTrack/source/scaletrack/scaletrack/assets/robots/k1/meshes" autolimits="true" />
+  <compiler angle="radian" meshdir="../meshes" autolimits="true" />
 
   <option timestep="0.001" tolerance="1e-6" impratio="10" solver="Newton" />
   <default>
