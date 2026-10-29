@@ -5,12 +5,12 @@ Use Python 3.11, Isaac Sim 5.1.0 and IsaacLab commit
 Install IsaacLab following its installation guide, then:
 
 ```bash
-pip install -e ScaleTrack/source/scaletrack -e ScaleTrack/source/my_rsl_rl
+pip install -e source/scaletrack -e source/my_rsl_rl
 pip install mujoco pytest
 ```
 
 The K1 MJCF and USD are included. Data and checkpoints are not bundled.
-The preparation tools in `ScaleTrack/scripts/k1/` expose their required inputs
+The preparation tools in `scripts/k1/` expose their required inputs
 with `--help`: `prepare_bones.py`, `prepare_lafan.py`, `retarget_lafan.py`,
 `pack_library.py`, and `merge_libraries.py`. Use the exact K1 morphology
 conversion before packing LAFAN. Do not mix previous IK outputs with this library.
@@ -79,7 +79,7 @@ Set `PYTHON`, `NPROC_PER_NODE`, or `SCALETRACK_COMPILE_CACHE_DIR` as needed.
 Additional training arguments are forwarded to the trainer.
 
 ```bash
-python -m pytest ScaleTrack/source/scaletrack/test/test_k1_model.py -q
+python -m pytest source/scaletrack/test/test_k1_model.py -q
 ```
 
 This checks K1/G1 state derivatives and forward kinematics against MuJoCo.
@@ -92,6 +92,6 @@ Based on Hxxxz0/ScaleBFM_Plus commit
 `65e4d524bd31fdc4284ba8c6e624fb0b0127da03`.
 K1 actuator settings derive from K1Lab commit
 `30f015a61f9583cba664b5ea65b0a1c73fba57e2`.
-The active training source is commit `53fea98`; this release only reorganizes
-publication material and makes its launcher portable. No training algorithm
+The active training source is commit `53fea98`; this release reorganizes the repository, packaging and publication material
+and makes its launcher portable. No training algorithm
 or default hyperparameter changes are introduced.

@@ -26,12 +26,19 @@ Follow [setup and data preparation](docs/k1/README.md), then launch with a packe
 BONES-SEED + LAFAN1 K1 library:
 
 ```bash
-K1_DATA_DIR=/path/to/combined_exact bash ScaleTrack/scripts/k1/launch_a10.sh
+K1_DATA_DIR=/path/to/combined_exact bash scripts/k1/launch_a10.sh
 ```
 
 Defaults: 8 GPUs, 512 environments/GPU, seed 42, 320k updates.
-Training, playback and export entry points are under `ScaleTrack/scripts/pretrain/`;
-K1 data and asset tools are under `ScaleTrack/scripts/k1/`.
+Training, playback and export entry points are under `scripts/pretrain/`;
+K1 data and asset tools are under `scripts/k1/`.
+
+## Layout
+
+- `scripts/`: training, evaluation, export and K1 data tools.
+- `source/scaletrack/`: robot assets, tasks and simulation environments.
+- `source/my_rsl_rl/`: policy and world-model training.
+- `docs/`: setup, data provenance and demos.
 
 ## Acknowledgements
 
