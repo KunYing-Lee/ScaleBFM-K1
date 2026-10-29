@@ -1,4 +1,4 @@
-from setuptools import find_packages, setup
+from setuptools import find_namespace_packages, setup
 
 # Minimum dependencies required prior to installation
 INSTALL_REQUIRES = [
@@ -13,7 +13,7 @@ INSTALL_REQUIRES = [
 # Installation operation
 setup(
     name="my_rsl_rl",
-    packages=find_packages(include=["my_rsl_rl", "my_rsl_rl.*"]),
+    packages=find_namespace_packages(include=["my_rsl_rl", "my_rsl_rl.*"]),
     author="Weishuai Zeng",
     url="https://github.com/zengweishuai/ScaleBFM",
     version="0.1.0",
