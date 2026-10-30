@@ -2,7 +2,13 @@
 
 22-DoF K1 motion tracking with ScaleBFM and SuperMimic-style world-model training.
 
-## Demos
+## Real-world demo
+
+[![K1 real-world motion tracking](docs/media/k1_hardware_demo.gif)](docs/media/k1_hardware_demo.mp4)
+
+Click the preview for the full video.
+
+## Simulation demos
 
 | | |
 |---|---|
