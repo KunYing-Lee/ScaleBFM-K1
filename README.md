@@ -4,9 +4,7 @@
 
 ## Real-world demo
 
-[![K1 real-world motion tracking](docs/media/k1_hardware_demo.gif)](docs/media/k1_hardware_demo.mp4)
-
-Click the preview for the full video.
+![K1 real-world motion tracking](docs/media/k1_hardware_demo.gif)
 
 ## Simulation demos
 
